@@ -53,3 +53,15 @@ func UpdateProduct(c *gin.Context) {
     }
     c.JSON(http.StatusNotFound, gin.H{"error": "Product not found"})
 }
+
+func DeleteProduct(c *gin.Context) {
+    id := c.Param("id")
+    for i, product := range products {
+        if productID := c.Param("id"); productID == id {
+            products = append(products[:i], products[i+1:]...)
+            c.JSON(http.StatusOK, gin.H{"message": "Product deleted"})
+            return
+        }
+    }
+    c.JSON(http.StatusNotFound, gin.H{"error": "Product not found"})
+}
