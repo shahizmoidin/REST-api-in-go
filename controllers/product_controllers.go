@@ -14,6 +14,7 @@ func GetProducts(c *gin.Context) {
     c.JSON(http.StatusOK, products)
 }
 
+
 func GetProduct(c *gin.Context) {
     id := c.Param("id")
     for _, product := range products {
@@ -25,6 +26,7 @@ func GetProduct(c *gin.Context) {
     c.JSON(http.StatusNotFound, gin.H{"error": "Product not found"})
 }
 
+
 func CreateProduct(c *gin.Context) {
     var newProduct models.Product
 
@@ -33,15 +35,16 @@ func CreateProduct(c *gin.Context) {
         return
     }
 
-    newProduct.ID = nextID
+    newProduct.ID = uint(nextID) 
     nextID++
     products = append(products, newProduct)
     c.JSON(http.StatusCreated, newProduct)
 }
 
+
 func UpdateProduct(c *gin.Context) {
     id := c.Param("id")
-    for i, product := range products {
+    for i := range products {
         if productID := c.Param("id"); productID == id {
             if err := c.ShouldBindJSON(&products[i]); err != nil {
                 c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -54,9 +57,10 @@ func UpdateProduct(c *gin.Context) {
     c.JSON(http.StatusNotFound, gin.H{"error": "Product not found"})
 }
 
+
 func DeleteProduct(c *gin.Context) {
     id := c.Param("id")
-    for i, product := range products {
+    for i := range products {
         if productID := c.Param("id"); productID == id {
             products = append(products[:i], products[i+1:]...)
             c.JSON(http.StatusOK, gin.H{"message": "Product deleted"})

@@ -1,12 +1,17 @@
 package main
 
 import (
-    "restapiingo/routes"
+    "restapiingo/routes"  
     "github.com/gin-gonic/gin"
 )
 
 func main() {
+    
     r := gin.Default()
+
+    
     routes.SetupRoutes(r)
+
+  
     r.Run(":8080")
 }
