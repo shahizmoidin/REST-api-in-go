@@ -35,7 +35,7 @@ func CreateProduct(c *gin.Context) {
         return
     }
 
-    newProduct.ID = uint(nextID) 
+    newProduct.ID = uint(nextID)
     nextID++
     products = append(products, newProduct)
     c.JSON(http.StatusCreated, newProduct)
