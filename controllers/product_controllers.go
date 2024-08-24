@@ -1,71 +1,131 @@
 package controllers
 
 import (
-    "net/http"
-    "restapiingo/models"
-    "github.com/gin-gonic/gin"
+	"context"
+	"net/http"
+	"restapiingo/models"
+	"time"
+
+	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
-var products []models.Product
-var nextID = 1
+var productCollection *mongo.Collection
 
+func InitProductController(db *mongo.Client, dbName, colName string) {
+	productCollection = db.Database(dbName).Collection(colName)
+}
 
 func GetProducts(c *gin.Context) {
-    c.IndentedJSON(http.StatusOK, products)
-}
+	var products []models.Product
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
+	cursor, err := productCollection.Find(ctx, bson.M{})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer cursor.Close(ctx)
+
+	for cursor.Next(ctx) {
+		var product models.Product
+		if err := cursor.Decode(&product); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		products = append(products, product)
+	}
+
+	c.JSON(http.StatusOK, products)
+}
 
 func GetProduct(c *gin.Context) {
-    id := c.Param("id")
-    for _, product := range products {
-        if productID := c.Param("id"); productID == id {
-            c.IndentedJSON(http.StatusOK, product)
-            return
-        }
-    }
-    c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Product not found"})
-}
+	var product models.Product
+	idParam := c.Param("id")
+	id, err := primitive.ObjectIDFromHex(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		return
+	}
 
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	err = productCollection.FindOne(ctx, bson.M{"_id": id}).Decode(&product)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Product not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, product)
+}
 
 func CreateProduct(c *gin.Context) {
-    var newProduct models.Product
+	var newProduct models.Product
 
-    if err := c.ShouldBindJSON(&newProduct); err != nil {
-        c.IndentedJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-        return
-    }
+	if err := c.ShouldBindJSON(&newProduct); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 
-    newProduct.ID = uint(nextID)
-    nextID++
-    products = append(products, newProduct)
-    c.IndentedJSON(http.StatusCreated, newProduct)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	result, err := productCollection.InsertOne(ctx, newProduct)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	newProduct.ID = result.InsertedID.(primitive.ObjectID)
+	c.JSON(http.StatusCreated, newProduct)
 }
-
 
 func UpdateProduct(c *gin.Context) {
-    id := c.Param("id")
-    for i := range products {
-        if productID := c.Param("id"); productID == id {
-            if err := c.ShouldBindJSON(&products[i]); err != nil {
-                c.IndentedJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-                return
-            }
-            c.IndentedJSON(http.StatusOK, products[i])
-            return
-        }
-    }
-    c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Product not found"})
+	idParam := c.Param("id")
+	id, err := primitive.ObjectIDFromHex(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		return
+	}
+
+	var updatedProduct models.Product
+	if err := c.ShouldBindJSON(&updatedProduct); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	_, err = productCollection.UpdateOne(ctx, bson.M{"_id": id}, bson.M{"$set": updatedProduct})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Product updated"})
 }
 
-
 func DeleteProduct(c *gin.Context) {
-    id := c.Param("id")
-    for i := range products {
-        if productID := c.Param("id"); productID == id {
-            products = append(products[:i], products[i+1:]...)
-            c.IndentedJSON(http.StatusOK, gin.H{"message": "Product deleted"})
-            return
-        }
-    }
-    c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Product not found"})
+	idParam := c.Param("id")
+	id, err := primitive.ObjectIDFromHex(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	_, err = productCollection.DeleteOne(ctx, bson.M{"_id": id})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Product deleted"})
 }
