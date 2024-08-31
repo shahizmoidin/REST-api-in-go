@@ -7,9 +7,15 @@ import (
 )
 
 func SetupRoutes(router *gin.Engine) {
-	router.GET("/products", controllers.GetProducts)
-	router.GET("/products/:id", controllers.GetProduct)
-	router.POST("/products", controllers.CreateProduct)
-	router.PUT("/products/:id", controllers.UpdateProduct)
-	router.DELETE("/products/:id", controllers.DeleteProduct)
+	router.POST("/register", controllers.Register)
+	router.POST("/login", controllers.Login)
+
+	secured := router.Group("/").Use(controllers.Authenticate())
+	{
+		secured.GET("/products", controllers.GetProducts)
+		secured.GET("/products/:id", controllers.GetProduct)
+		secured.POST("/products", controllers.CreateProduct)
+		secured.PUT("/products/:id", controllers.UpdateProduct)
+		secured.DELETE("/products/:id", controllers.DeleteProduct)
+	}
 }
