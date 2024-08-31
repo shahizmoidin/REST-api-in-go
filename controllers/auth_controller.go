@@ -90,3 +90,36 @@ func Login(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"token": tokenString})
 }
+
+func Authenticate() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		tokenString := c.GetHeader("Authorization")
+		if tokenString == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Request does not contain an access token"})
+			c.Abort()
+			return
+		}
+
+		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+			return jwtKey, nil
+		})
+
+		if err != nil || !token.Valid {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid tokn"})
+			c.Abort()
+			return
+		}
+
+		claims, ok := token.Claims.(jwt.MapClaims)
+		if !ok || !token.Valid {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid tokn"})
+			c.Abort()
+			return
+
+		}
+
+		c.Set("user_id", claims["user_id"])
+		c.Next()
+	}
+
+}
