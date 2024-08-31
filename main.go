@@ -13,8 +13,7 @@ import (
 )
 
 func main() {
-
-	clientOptions := options.Client().ApplyURI("mongodb+srv://nnm23mc060:le3uh4DDWIjuDymr@cluster0.ghe7tvk.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
+	clientOptions := options.Client().ApplyURI("your_mongo_uri")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -29,9 +28,10 @@ func main() {
 		log.Fatal(err)
 	}
 
-	log.Println("Connected to MongoDB Atlas!")
+	log.Println("Connected to MongoDB!")
 
 	controllers.InitProductController(client, "restapiforgo", "products")
+	controllers.InitAuthController(client, "restapiforgo", "users")
 
 	r := gin.Default()
 	routes.SetupRoutes(r)
