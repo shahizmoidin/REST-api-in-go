@@ -76,12 +76,11 @@ func Login(c *gin.Context) {
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(credentials.Password))
 	if err != nil {
-		fmt.Println("Password comparison error:", err) // Log the exact error
+		fmt.Println("Password comparison error:", err)
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
 		return
 	}
 
-	// Create JWT token
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user_id": user.ID.Hex(),
 		"exp":     time.Now().Add(time.Hour * 24).Unix(),
@@ -103,6 +102,10 @@ func Authenticate() gin.HandlerFunc {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Request does not contain an access token"})
 			c.Abort()
 			return
+		}
+
+		if len(tokenString) > 7 && tokenString[:7] == "Bearer " {
+			tokenString = tokenString[7:]
 		}
 
 		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
