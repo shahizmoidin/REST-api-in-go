@@ -107,6 +107,11 @@ func UpdateProduct(c *gin.Context) {
 		return
 	}
 
+	if updateResult.MatchedCount == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Product not found"})
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{"message": "Product updated"})
 }
 
@@ -121,9 +126,14 @@ func DeleteProduct(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	_, err = productCollection.DeleteOne(ctx, bson.M{"_id": id})
+	deleteResult, err := productCollection.DeleteOne(ctx, bson.M{"_id": id})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete product"})
+		return
+	}
+
+	if deleteResult.DeletedCount == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Product not found"})
 		return
 	}
 
