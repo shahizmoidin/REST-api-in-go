@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"restapiingo/models"
 	"time"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
@@ -20,10 +21,27 @@ func InitProductController(db *mongo.Client, dbName, colName string) {
 
 func GetProducts(c *gin.Context) {
 	var products []models.Product
+
+	// Pagination
+	pageStr := c.Query("page")
+	limitStr := c.Query("limit")
+	page, err := strconv.Atoi(pageStr)
+	if err != nil || page < 1 {
+		page = 1
+	}
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil || limit < 1 {
+		limit = 10
+	}
+
+	skip := (page - 1) * limit
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	cursor, err := productCollection.Find(ctx, bson.M{})
+	cursor, err := productCollection.Find(ctx, bson.M{}, &mongo.FindOptions{
+		Skip:  &skip,
+		Limit: &limit,
+	})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -71,6 +89,12 @@ func CreateProduct(c *gin.Context) {
 		return
 	}
 
+	// Validation
+	if newProduct.Price < 0 || newProduct.Quantity < 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Price and Quantity must be non-negative"})
+		return
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -95,6 +119,12 @@ func UpdateProduct(c *gin.Context) {
 	var updatedProduct models.Product
 	if err := c.ShouldBindJSON(&updatedProduct); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Validation
+	if updatedProduct.Price < 0 || updatedProduct.Quantity < 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Price and Quantity must be non-negative"})
 		return
 	}
 
