@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"restapiingo/models"
 	"time"
@@ -15,7 +16,7 @@ import (
 )
 
 var userCollection *mongo.Collection
-var jwtKey = []byte("your_secret_key") // Replace with your secret key
+var jwtKey = []byte("3894839")
 
 func InitAuthController(db *mongo.Client, dbName, colName string) {
 	userCollection = db.Database(dbName).Collection(colName)
@@ -70,8 +71,12 @@ func Login(c *gin.Context) {
 		return
 	}
 
+	fmt.Println("Stored hash:", user.PasswordHash)
+	fmt.Println("Provided password:", credentials.Password)
+
 	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(credentials.Password))
 	if err != nil {
+		fmt.Println("Password comparison error:", err) // Log the exact error
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
 		return
 	}
@@ -105,21 +110,19 @@ func Authenticate() gin.HandlerFunc {
 		})
 
 		if err != nil || !token.Valid {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid tokn"})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
 			c.Abort()
 			return
 		}
 
 		claims, ok := token.Claims.(jwt.MapClaims)
 		if !ok || !token.Valid {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid tokn"})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
 			c.Abort()
 			return
-
 		}
 
 		c.Set("user_id", claims["user_id"])
 		c.Next()
 	}
-
 }
