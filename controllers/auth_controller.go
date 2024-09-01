@@ -30,7 +30,8 @@ func Register(c *gin.Context) {
 		return
 	}
 
-	hash, err := bcrypt.GenerateFromPassword([]byte(user.PasswordHash), bcrypt.DefaultCost)
+	// Hash the password
+	hash, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error hashing password"})
 		return
@@ -71,9 +72,7 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	fmt.Println("Stored hash:", user.PasswordHash)
-	fmt.Println("Provided password:", credentials.Password)
-
+	// Compare the provided password with the stored hash
 	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(credentials.Password))
 	if err != nil {
 		fmt.Println("Password comparison error:", err) // Log the exact error
